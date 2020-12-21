@@ -3,7 +3,7 @@ from sklearn.tree import DecisionTreeClassifier
 from scipy import stats
 import numbers
 
-
+#load csv files
 def load_data(filename):
     data = np.load(filename)
     data_x = data[:, :-1]
@@ -13,16 +13,15 @@ def load_data(filename):
 
 
 class Bagging(object):
+    #list of classifiers
     clf = []
+    #init values for clf
     def __init__(self, n_classifiers, max_depth):
         '''
         Input:
             n_classifiers: number of trees in the ensemble. int
             max_depth: maximum depth allowed for every tree built. It should not exceed 20. int
         '''
-        ###############################
-        # TODO: your implementation
-        ###############################
         self.n_classifiers = n_classifiers
         self.max_depth = max_depth
         for i in range(self.n_classifiers):
@@ -36,13 +35,11 @@ class Bagging(object):
             X: Feature vector of shape (N, D). N - number of training samples; D - number of features. np ndarray
             y: label vector of shape (N,). np ndarray
         '''
+        
         for i in range(self.n_classifiers):
             self.clf[i] = DecisionTreeClassifier(max_depth = self.max_depth)
             randComb = np.random.choice(1000, 1000, replace=True)
             self.clf[i] = self.clf[i].fit(X[randComb], y[randComb])
-        ###############################
-        # TODO: your implementation
-        ###############################
         
     
     def test(self, X):
@@ -53,20 +50,23 @@ class Bagging(object):
         Output:
             prediction: label vector of shape (N,). np array, dtype=int
         '''
+
         pred = np.zeros((self.n_classifiers, X.shape[0]))
         counter1 = []
         counter0 = []
-
+        #init lists of counters for 1/good and 0/bad
         for i in range(X.shape[0]):
             counter1.append(0)
             counter0.append(0)
 
+        #precitions for each classifier
         for i in range(self.n_classifiers):
             pred[i] = self.clf[i].predict(X)
             
 
 
-
+        #check for the predicitions. Add to each counter for each prediction that is
+        #good/1 or bad/0
         for i in range(self.n_classifiers):
             for j in range(X.shape[0]):
                 if pred[i][j] == 0:
@@ -74,6 +74,7 @@ class Bagging(object):
                 elif pred[i][j] == 1:
                     counter1[j] += 1
         
+        #for each precitions of the classifiers, check which one has more 1 or 0
         predCombined = np.zeros((X.shape[0]))
         for i in range(X.shape[0]):
             if counter1[i] > counter0[i]:
@@ -81,13 +82,11 @@ class Bagging(object):
             else:
                 predCombined[i] = 0
         return predCombined
-        ###############################
-        # TODO: your implementation
-        ###############################
         
     
     
 class Boosting(object):
+    #init classifier and alpha lists
     clf = []
     alphaArr = []
     def __init__(self, n_classifiers, max_depth):
@@ -103,9 +102,6 @@ class Boosting(object):
         for i in range(self.n_classifiers):
             self.clf.append(0)
             self.alphaArr.append(0)
-        ###############################
-        # TODO: your implementation
-        ###############################
         
         
     def train(self, X, y):
@@ -115,8 +111,9 @@ class Boosting(object):
             X: Feature vector of shape (N, D). N - number of training samples; D - number of features. np ndarray
             y: label vector of shape (N,). np ndarray
         '''
-        
+        #weight regularization
         weights = np.ones(X.shape[0]) / X.shape[0]
+        #create classifier for each tree
         for t in range(self.n_classifiers):
             self.clf[t] = DecisionTreeClassifier(splitter='random', max_depth = self.max_depth)
             self.clf[t].fit(X, y, sample_weight = weights)
@@ -124,10 +121,12 @@ class Boosting(object):
 
             error = 0
             size = prediction.shape[0]
+            #get error and regularization of error
             for i in range(size):
                 error += weights[i] * (prediction[i] != y[i])
             error /= np.sum(weights)
 
+            #calculate
             alpha = (np.log(((1-error)/error)**.5))
             self.alphaArr[t] = alpha
             for i in range(X.shape[0]):
@@ -142,9 +141,6 @@ class Boosting(object):
         
         self.alphaArr /= np.sum(self.alphaArr)
 
-        ###############################
-        # TODO: your implementation
-        ###############################
         
     
     def test(self, X):
@@ -158,21 +154,23 @@ class Boosting(object):
         totalClassifiers = []
         addedClassifier = np.zeros((X.shape[0]))
         
+        #init array with 0s
         for i in range(self.n_classifiers):
             totalClassifiers.append(0)
 
-        
+        #calculate classifier using alpha * prediciton
         for i in range(self.n_classifiers):
             totalClassifiers[i] = self.alphaArr[i] * self.clf[i].predict(X)
         
 
+        #for each tree, combine predicitons
         for i in range(self.n_classifiers):
             for j in range(X.shape[0]):
                 addedClassifier[j] += totalClassifiers[i][j]
         
 
         
-
+        #if greater or equal to .5, classify as 1/good. else classify as bad/0
         for i in range(X.shape[0]):
             if addedClassifier[i] >= .5:
                 addedClassifier[i] = 1
@@ -182,13 +180,10 @@ class Boosting(object):
         
 
         return addedClassifier
-        ###############################
-        # TODO: your implementation
-        ###############################
         
     
     
-# Please do not modify the variable names
+
 X_train, y_train = load_data('winequality-red-train-2class.npy')
 X_test, y_test = load_data('winequality-red-test-2class.npy')
 bagging = Bagging(50, 20)
